@@ -29,9 +29,22 @@
 		F6D9D7FD2D33C93800D70DDD /* ProjectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ProjectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F61382D12DF49CCF0019AE9F /* Exceptions for "Project" folder in "Project" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F6D9D7E22D33C93700D70DDD /* Project */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F6D9D7E52D33C93700D70DDD /* Project */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F61382D12DF49CCF0019AE9F /* Exceptions for "Project" folder in "Project" target */,
+			);
 			path = Project;
 			sourceTree = "<group>";
 		};
@@ -399,6 +412,7 @@
 				DEVELOPMENT_TEAM = G86N7464Y4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Project/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -430,6 +444,7 @@
 				DEVELOPMENT_TEAM = G86N7464Y4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Project/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
