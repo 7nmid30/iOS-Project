@@ -19,17 +19,20 @@ struct ContentView: View { //メインビュー
     @State private var searchText: String = "" // 検索テキストの状態
     @FocusState private var isFocused: Bool // 検索窓がフォーカスされているか
     @State private var results: [Place] = []
-    //@State private var isShowingSheet: Bool = false
-    //@State private var sheetHeight: PresentationDetent = .fraction(0.3) // 初期表示
-    // 新しいState
-    //@State private var isSheetVisible = false
     @State private var sheetOffset: CGFloat = 0 // ← 初期は0、onAppearでminYに自動セットされる
-    
+    @State private var selectedPlace: Place? = nil
     
     var body: some View {
         ZStack {
             //MapView構造体を呼び出す
-            MapView(region: $region, heading: $locationManager.heading, mapRotation: $mapRotation, shouldUpdateRegion: $shouldUpdateRegion) //＄記号は、State などで管理されている変数をバインディング形式（監視対象）で渡すために使う。
+            MapView(
+                region: $region,
+                heading: $locationManager.heading,
+                mapRotation: $mapRotation,
+                shouldUpdateRegion: $shouldUpdateRegion,
+                results: $results,
+                selectedPlace: $selectedPlace
+            ) //＄記号は、State などで管理されている変数をバインディング形式（監視対象）で渡すために使う。
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
                     isFocused = false // フォーカスを解除
@@ -82,11 +85,6 @@ struct ContentView: View { //メインビュー
                         if let location = locationManager.currentLocation {//currentLocationがnillでない場合のみlocationに代入して以下の処理実行
                             region.center = location // region の中心を現在地に更新
                             shouldUpdateRegion = true // フラグを立てる
-//                            region = MKCoordinateRegion(
-//                                center: location,
-//                                span: region.span // 現在のズーム率（span）を維持
-//                            )
-//                            shouldUpdateRegion = true // フラグを立てて地図を更新
                         }
                     }) {
                         ZStack {//現在地ボタン
@@ -116,16 +114,14 @@ struct ContentView: View { //メインビュー
                 SearchResultsView(
                     results: results,
                     region: $region,
-                    shouldUpdateRegion: $shouldUpdateRegion
+                    shouldUpdateRegion: $shouldUpdateRegion,
+                    selectedPlace: $selectedPlace //
                 )
             }
         }
         .onAppear {
             locationManager.setup()
         }
-//        .sheet(isPresented: $isShowingSheet) {
-//            SearchResultsView(results: results, region: $region, shouldUpdateRegion: $shouldUpdateRegion, sheetHeight: $sheetHeight)
-//        }
     }
     // キーボードを閉じる関数
     private func hideKeyboard() {
@@ -167,16 +163,18 @@ struct ContentView: View { //メインビュー
                 let mapped = decoded.places.map {
                         Place(
                             name: $0.displayName.text,
-                            coordinate: CLLocationCoordinate2D(latitude: $0.location.latitude, longitude: $0.location.longitude)
+                            coordinate: CLLocationCoordinate2D(latitude: $0.location.latitude, longitude: $0.location.longitude),
+                            rating: $0.rating,
+                            userRatingCount: $0.userRatingCount,
+                            startPrice: $0.priceRange?.startPrice?.units,
+                            endPrice: $0.priceRange?.endPrice?.units,
+                            currencyCode: $0.priceRange?.startPrice?.currencyCode
                         )
                 }
                 
                 //
                 DispatchQueue.main.async {
                     self.results = mapped
-                    //self.isShowingSheet = true
-                    //self.isSheetVisible = true
-                    //self.sheetOffset = UIScreen.main.bounds.height * 0.6 // mid表示
                 }
                 
             } catch {
