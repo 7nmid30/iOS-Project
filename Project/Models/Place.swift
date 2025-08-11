@@ -17,7 +17,6 @@ struct Place: Identifiable{
     let startPrice: String?
     let endPrice: String?
     let currencyCode: String?
-
 }
 
 struct PlaceResponseWrapper: Codable {
@@ -68,25 +67,3 @@ class PlaceAnnotation: NSObject, MKAnnotation {
         //self.id = place.id
     }
 }
-
-//import Foundation
-//
-//struct Place: Codable, Identifiable {
-//    var id = UUID()
-//    let userRatingCount: Int?
-//    let priceRange: Int?
-//    let displayName: DisplayName?
-//    let formattedAddress: String?
-//    let location: Location?
-//    let rating: Double?
-//}
-//
-//struct DisplayName: Codable {
-//    let text: String
-//    let languageCode: String?
-//}
-//
-//struct Location: Codable {
-//    let latitude: Double
-//    let longitude: Double
-//}
