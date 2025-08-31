@@ -18,15 +18,19 @@ struct ContentView: View { //メインビュー
     @State private var shouldUpdateRegion: Bool = false
     @State private var searchText: String = "" // 検索テキストの状態
     @FocusState private var isFocused: Bool // 検索窓がフォーカスされているか
-    @State private var results: [Place] = []
+    //State private var results: [GooglePlace] = [] //Google用
+    @State private var results: [ApplePlace] = []
     @State private var sheetOffset: CGFloat = 0 // ← 初期は0、onAppearでminYに自動セットされる
-    @State private var selectedPlace: Place? = nil
+    //@State private var selectedPlace: GooglePlace? = nil //Google用
+    @State private var selectedPlace: ApplePlace? = nil
     //アカウントボタン用の@Stateを用意
     @State private var isAccountSheetPresented = false
     
     @AppStorage("isLoggedIn") var isLoggedIn: Bool = false
     
     @State private var favorites: [FavoriteRestaurant] = []
+    
+    @StateObject private var vm = NearbySearchViewModel()
     
     var body: some View {
         Group {
@@ -53,7 +57,12 @@ struct ContentView: View { //メインビュー
                         HStack {
                             // 検索バーを追加（TextFieldの内側にアイコンを配置）
                             TextField("検索", text: $searchText, onCommit: {
-                                search(keyword: searchText) // Enterキー押下時
+                                // Enterキー押下時
+                                //search(keyword: searchText) //Google用
+                                Task { // ← ここで非同期コンテキストを作る
+                                        await vm.search(keyword: searchText, around: region.center)
+                                    self.results = vm.results        // ← これが無いので画面に出ていない
+                                }
                                 self.sheetOffset = UIScreen.main.bounds.height * 0.6 // mid表示
                             })
                             .submitLabel(.search) // キーボード右下を「検索」に
@@ -149,6 +158,9 @@ struct ContentView: View { //メインビュー
                 .sheet(isPresented: $isAccountSheetPresented) {
                     AccountSheetView(favorites: $favorites)
                 }
+                .task(id: isLoggedIn) {
+                    await fetchMyRestaurants()
+                }
             } else {
                 LoginView(favorites: $favorites)
             }
@@ -189,11 +201,10 @@ struct ContentView: View { //メインビュー
                 return
             }
             do {
-                //print(String(data: data, encoding: .utf8) ?? "データが文字列に変換できません")
                 // JSON を PlaceResponseWrapper としてデコード
                 let decoded = try JSONDecoder().decode(PlaceResponseWrapper.self, from: data)
                 let mapped = decoded.places.map {
-                    Place(
+                    GooglePlace(
                         name: $0.displayName.text,
                         coordinate: CLLocationCoordinate2D(latitude: $0.location.latitude, longitude: $0.location.longitude),
                         rating: $0.rating,
@@ -206,7 +217,7 @@ struct ContentView: View { //メインビュー
                 
                 //
                 DispatchQueue.main.async {
-                    self.results = mapped
+                    //self.results = mapped
                 }
                 
             } catch {
@@ -215,6 +226,69 @@ struct ContentView: View { //メインビュー
         }
         task.resume()
         
+    }
+    
+    
+    func fetchMyRestaurants() async {
+        guard let token = UserDefaults.standard.string(forKey: "token") else {
+            print("トークンが存在しません")
+            return
+        }
+        
+        guard let url = URL(string: "https://moguroku.com/getmyrestaurants") else {
+            print("URLが不正です")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("無効なレスポンス")
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                print("認証エラー")
+                return // 認証エラー時は何もしない
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                throw URLError(.badServerResponse)
+            }
+            
+            let decoder = JSONDecoder()
+            let result = try decoder.decode(FavoriteRestaurantListResponse.self, from: data)
+            
+            DispatchQueue.main.async {
+                self.favorites = result.userFavoriteRestaurants
+            }
+            
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("レスポンスのJSON文字列: \(jsonString)")
+            } else {
+                print("データの文字列変換に失敗しました")
+            }
+            //
+            //                // デコード結果を安全に取り出す
+            //                if let favorites = result.userFavoriteRestaurants {
+            //                    DispatchQueue.main.async {
+            //                        self.myRestaurants = favorites
+            //                    }
+            //                } else {
+            //                    DispatchQueue.main.async {
+            //                        self.myRestaurants = []
+            //                    }
+            //                }
+            
+        } catch {
+            print("エラーが発生しました: \(error.localizedDescription)")
+        }
     }
 }
 

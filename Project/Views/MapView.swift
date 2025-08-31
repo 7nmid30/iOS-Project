@@ -12,9 +12,11 @@ struct MapView: UIViewRepresentable {
     @Binding var heading: CLHeading?
     @Binding var mapRotation: Double
     @Binding var shouldUpdateRegion: Bool
-    //let results: [Place] // 検索結果。検索実行した時だけ反映でいい
-    @Binding var results: [Place]
-    @Binding var selectedPlace: Place?
+    
+    //@Binding var results: [Place] //Google用
+    @Binding var results: [ApplePlace]
+    //@Binding var selectedPlace: Place? //Google用
+    @Binding var selectedPlace: ApplePlace?
     
     let mapView = MKMapView()
     

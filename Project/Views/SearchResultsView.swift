@@ -8,16 +8,16 @@ import SwiftUI
 import MapKit
 
 struct SearchResultsView: View {
-    let results: [Place]
+    //let results: [GooglePlace] //Google用
+    let results: [ApplePlace]
     @Binding var region: MKCoordinateRegion
     @Binding var shouldUpdateRegion: Bool
-    @Binding var selectedPlace: Place?  // 選択された場所
+    //@Binding var selectedPlace: GooglePlace?  // 選択された場所
+    @Binding var selectedPlace: ApplePlace?  // 選択された場所
     
     @Binding var favorites: [FavoriteRestaurant] //お気に入りのマイレストラン
     
-    //@State private var favoritePlaces: Set<Place.ID> = [] //いいねされた飲食店
-    
-    @State private var showLoginView = false
+    @State private var reviewPlace: ApplePlace? = nil   // ← 行でセットする“対象”
     
     var body: some View {
         VStack {
@@ -62,9 +62,17 @@ struct SearchResultsView: View {
                             .foregroundColor(.red)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .sheet(isPresented: $showLoginView) {
-                        //LoginView(favorites: $favorites) // ログイン画面に飛ばす
+                    
+                    // 口コミを書くボタン
+                    Button(action: {
+                        print("口コミを書く tapped: \(place.name)")
+                        reviewPlace = place     // ← シートは開かない。対象だけセット
+
+                    }) {
+                        Image(systemName: "text.bubble") // 💬 吹き出し
+                            .foregroundColor(.gray)
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 .padding(8)
                 .frame(maxWidth: .infinity, alignment: .leading) // 選択されたList内の領域（文字を格納している領域）全体のセル背景を青くする
@@ -81,13 +89,24 @@ struct SearchResultsView: View {
             }
             
         }
+        .sheet(item: $reviewPlace) { place in          // ← 親に1つだけ
+            ReviewSheetView(placeName: place.name) {
+                // 投稿後のリフレッシュが必要ならここ
+            }
+        }
         
         
     }
+        
     
     
     // すでにお気に入りか判定（名前一致で判定）
-    private func isFavorited(_ place: Place) -> Bool {
+//    private func isFavorited(_ place: Place) -> Bool {
+//        favorites.contains { fav in
+//            fav.restaurantName == place.name
+//        }
+//    }
+    private func isFavorited(_ place: ApplePlace) -> Bool {
         favorites.contains { fav in
             fav.restaurantName == place.name
         }

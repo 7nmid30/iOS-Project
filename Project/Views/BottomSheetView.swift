@@ -52,8 +52,8 @@ struct BottomSheetView<Content: View>: View {
             .onAppear {
                 // 最初は最小状態に表示させておく（常に少し見える）
                 if offset == 0 {
-                    //offset = screenHeight //本番ではこっち
-                    offset = minY
+                    offset = screenHeight //本番ではこっち
+                    //offset = minY
                 }
             }
         }

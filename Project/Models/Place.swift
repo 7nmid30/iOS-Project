@@ -8,7 +8,7 @@ import Foundation
 import CoreLocation
 import MapKit
 
-struct Place: Identifiable{
+struct GooglePlace: Identifiable{
     let id = UUID()  // List用に必須
     let name: String
     let coordinate: CLLocationCoordinate2D
@@ -59,11 +59,27 @@ struct PlaceResponse: Codable {
 class PlaceAnnotation: NSObject, MKAnnotation {
     let coordinate: CLLocationCoordinate2D
     let title: String?
-    //let id: UUID  // ← 追加！
 
-    init(place: Place) {
+    //GoogleMap用
+    init(place: GooglePlace) {
         self.coordinate = place.coordinate
         self.title = place.name
         //self.id = place.id
     }
+    
+    init(place: ApplePlace) {
+        self.coordinate = place.coordinate
+        self.title = place.name
+        //self.id = place.id
+    }
+}
+
+//MapKit用
+struct ApplePlace: Identifiable {
+    let id = UUID()
+    let name: String
+    let coordinate: CLLocationCoordinate2D
+    let phoneNumber: String?
+    let url: URL?
+    let address: String?
 }

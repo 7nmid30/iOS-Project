@@ -63,64 +63,64 @@ struct AccountSheetView: View {
     }
     
     func fetchMyRestaurants() async {
-            guard let token = UserDefaults.standard.string(forKey: "token") else {
-                print("トークンが存在しません")
-                return
-            }
-
-            guard let url = URL(string: "https://moguroku.com/getmyrestaurants") else {
-                print("URLが不正です")
-                return
-            }
-
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-            do {
-                let (data, response) = try await URLSession.shared.data(for: request)
-
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    print("無効なレスポンス")
-                    return
-                }
-
-                if httpResponse.statusCode == 401 {
-                    print("認証エラー")
-                    return // 認証エラー時は何もしない
-                }
-
-                guard httpResponse.statusCode == 200 else {
-                    throw URLError(.badServerResponse)
-                }
-
-                let decoder = JSONDecoder()
-                let result = try decoder.decode(FavoriteRestaurantListResponse.self, from: data)
-
-                DispatchQueue.main.async {
-                    self.favorites = result.userFavoriteRestaurants
-                }
-                
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("レスポンスのJSON文字列: \(jsonString)")
-                } else {
-                    print("データの文字列変換に失敗しました")
-                }
-//
-//                // デコード結果を安全に取り出す
-//                if let favorites = result.userFavoriteRestaurants {
-//                    DispatchQueue.main.async {
-//                        self.myRestaurants = favorites
-//                    }
-//                } else {
-//                    DispatchQueue.main.async {
-//                        self.myRestaurants = []
-//                    }
-//                }
-
-            } catch {
-                print("エラーが発生しました: \(error.localizedDescription)")
-            }
+        guard let token = UserDefaults.standard.string(forKey: "token") else {
+            print("トークンが存在しません")
+            return
         }
+        
+        guard let url = URL(string: "https://moguroku.com/getmyrestaurants") else {
+            print("URLが不正です")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("無効なレスポンス")
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                print("認証エラー")
+                return // 認証エラー時は何もしない
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                throw URLError(.badServerResponse)
+            }
+            
+            let decoder = JSONDecoder()
+            let result = try decoder.decode(FavoriteRestaurantListResponse.self, from: data)
+            
+            DispatchQueue.main.async {
+                self.favorites = result.userFavoriteRestaurants
+            }
+            
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("レスポンスのJSON文字列: \(jsonString)")
+            } else {
+                print("データの文字列変換に失敗しました")
+            }
+            //
+            //                // デコード結果を安全に取り出す
+            //                if let favorites = result.userFavoriteRestaurants {
+            //                    DispatchQueue.main.async {
+            //                        self.myRestaurants = favorites
+            //                    }
+            //                } else {
+            //                    DispatchQueue.main.async {
+            //                        self.myRestaurants = []
+            //                    }
+            //                }
+            
+        } catch {
+            print("エラーが発生しました: \(error.localizedDescription)")
+        }
+    }
 }
