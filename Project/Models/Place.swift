@@ -82,4 +82,34 @@ struct ApplePlace: Identifiable {
     let phoneNumber: String?
     let url: URL?
     let address: String?
+    let rating: Double?
+    let userRatingCount: Int?
+    let startPrice: String?
+    let endPrice: String?
+    let currencyCode: String?
+    let category: String?
+}
+
+// extension を追加（Encodableにもできるようにということで）
+extension ApplePlace: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case name, latitude, longitude, phoneNumber, url, address,
+             rating, userRatingCount, startPrice, endPrice, currencyCode, category
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(name, forKey: .name)
+        try c.encode(coordinate.latitude, forKey: .latitude)
+        try c.encode(coordinate.longitude, forKey: .longitude)
+        try c.encodeIfPresent(phoneNumber, forKey: .phoneNumber)
+        if let url = url { try c.encode(url.absoluteString, forKey: .url) }
+        try c.encodeIfPresent(address, forKey: .address)
+        try c.encodeIfPresent(rating, forKey: .rating)
+        try c.encodeIfPresent(userRatingCount, forKey: .userRatingCount)
+        try c.encodeIfPresent(startPrice, forKey: .startPrice)
+        try c.encodeIfPresent(endPrice, forKey: .endPrice)
+        try c.encodeIfPresent(currencyCode, forKey: .currencyCode)
+        try c.encodeIfPresent(category, forKey: .category)
+    }
 }

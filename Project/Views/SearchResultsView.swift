@@ -49,7 +49,7 @@ struct SearchResultsView: View {
                         } else {
                             // isFavがfalse（お気に入りではない） のときの処理
                             // 登録処理
-                            registerRestaurant(name: place.name) { success in
+                            favRestaurant(place: place) { success in
                                 if success {
                                     Task { await fetchMyRestaurants() }
                                 } else {
@@ -113,14 +113,14 @@ struct SearchResultsView: View {
     }
     
     
-    func registerRestaurant(name: String, completion: @escaping (Bool) -> Void) {
+    func favRestaurant(place: ApplePlace, completion: @escaping (Bool) -> Void) {
         guard let token = UserDefaults.standard.string(forKey: "token") else {
             print("トークンがありません")
             completion(false)
             return
         }
         
-        guard let url = URL(string: "https://moguroku.com/myrestaurantlist/add") else {
+        guard let url = URL(string: "https://moguroku.com/favoriteRestaurant/add") else {
             print("URLが不正です")
             completion(false)
             return
@@ -131,9 +131,12 @@ struct SearchResultsView: View {
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let body = ["keyword": name]
+        
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let encoder = JSONEncoder()
+            // サーバ側がスネークケースなら有効化：
+            // encoder.keyEncodingStrategy = .convertToSnakeCase
+            request.httpBody = try encoder.encode(place)
         } catch {
             print("リクエストボディ作成エラー: \(error)")
             completion(false)
@@ -179,7 +182,7 @@ struct SearchResultsView: View {
             return
         }
         
-        guard let url = URL(string: "https://moguroku.com/myrestaurantlist/delete") else {
+        guard let url = URL(string: "https://moguroku.com/favoriteRestaurant/delete") else {
             print("URLが不正です")
             completion(false)
             return
@@ -237,7 +240,7 @@ struct SearchResultsView: View {
             return
         }
         
-        guard let url = URL(string: "https://moguroku.com/getmyrestaurants") else {
+        guard let url = URL(string: "https://moguroku.com/FavoriteRestaurant/get") else {
             print("URLが不正です")
             return
         }

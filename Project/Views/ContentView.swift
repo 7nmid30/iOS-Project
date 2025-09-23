@@ -235,7 +235,7 @@ struct ContentView: View { //メインビュー
             return
         }
         
-        guard let url = URL(string: "https://moguroku.com/getmyrestaurants") else {
+        guard let url = URL(string: "https://moguroku.com/FavoriteRestaurant/get") else {
             print("URLが不正です")
             return
         }
@@ -261,6 +261,11 @@ struct ContentView: View { //メインビュー
             guard httpResponse.statusCode == 200 else {
                 throw URLError(.badServerResponse)
             }
+            
+            // JSONの素の文字列を先に確認（本番では消す）
+                if let s = String(data: data, encoding: .utf8) {
+                    print("返却値:", s)
+                }
             
             let decoder = JSONDecoder()
             let result = try decoder.decode(FavoriteRestaurantListResponse.self, from: data)

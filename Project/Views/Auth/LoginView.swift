@@ -124,7 +124,7 @@ struct LoginView: View {
                 return
             }
 
-            guard let url = URL(string: "https://moguroku.com/getmyrestaurants") else {
+            guard let url = URL(string: "https://moguroku.com/favoriteRestaurant/get") else {
                 print("URLが不正です")
                 return
             }

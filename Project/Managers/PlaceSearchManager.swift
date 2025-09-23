@@ -11,9 +11,10 @@ import CoreLocation
 import Contacts
 
 final class PlaceSearchManager {
-    static let shared = PlaceSearchManager() // シングルトンにしてもよい
+    static let shared = PlaceSearchManager() // シングルトン
     private init() {}
 
+    //直線距離(m)を取得
     private func distance(from a: CLLocationCoordinate2D, to b: CLLocationCoordinate2D) -> CLLocationDistance {
         CLLocation(latitude: a.latitude, longitude: a.longitude)
             .distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
@@ -34,7 +35,7 @@ final class PlaceSearchManager {
     ) async throws -> [ApplePlace] {
         var collected: [MKMapItem] = []
         var seen = Set<String>()
-        var radius = max(200, initialRadiusMeters)
+        var radius = max(200, initialRadiusMeters) //200mも選択できる
 
         while collected.count < minCount && radius <= maxRadiusMeters {
             var req = MKLocalSearch.Request()
@@ -43,10 +44,10 @@ final class PlaceSearchManager {
                                             latitudinalMeters: radius * 2,
                                             longitudinalMeters: radius * 2)
 
-            let res = try await MKLocalSearch(request: req).start()
+            let res = try await MKLocalSearch(request: req).start() //Appleのローカル検索API
             for item in res.mapItems {
                 let c = item.placemark.coordinate
-                let key = "\(item.name ?? "")_\(round(c.latitude * 10000))_\(round(c.longitude * 10000))"
+                let key = "\(item.name ?? "")_\(round(c.latitude * 10000))_\(round(c.longitude * 10000))"//例ラーメン屋_356812_1397671
                 if !seen.contains(key) {
                     seen.insert(key)
                     collected.append(item)
@@ -64,11 +65,17 @@ final class PlaceSearchManager {
 
         return topN.map { item in
             ApplePlace(
-                name: item.name ?? "名称不明",
+                name: item.name ?? "",
                 coordinate: item.placemark.coordinate,
                 phoneNumber: item.phoneNumber,
                 url: item.url,
-                address: addressString(item.placemark.postalAddress)
+                address: addressString(item.placemark.postalAddress),
+                rating: 0,
+                userRatingCount: 0,
+                startPrice: "",
+                endPrice: "",
+                currencyCode: "",
+                category: item.pointOfInterestCategory?.rawValue
             )
         }
     }
