@@ -20,7 +20,9 @@ struct ContentView: View { //メインビュー
     @FocusState private var isFocused: Bool // 検索窓がフォーカスされているか
     //State private var results: [GooglePlace] = [] //Google用
     @State private var results: [ApplePlace] = []
-    @State private var sheetOffset: CGFloat = 0 // ← 初期は0、onAppearでminYに自動セットされる
+    
+    @State private var sheetOffset: CGFloat = UIScreen.main.bounds.height // 画面外から開始
+    //@State private var sheetOffset: CGFloat = 0 // ← 初期は0、onAppearでminYに自動セットされる
     //@State private var selectedPlace: GooglePlace? = nil //Google用
     @State private var selectedPlace: ApplePlace? = nil
     //アカウントボタン用の@Stateを用意
@@ -29,6 +31,7 @@ struct ContentView: View { //メインビュー
     @AppStorage("isLoggedIn") var isLoggedIn: Bool = false
     
     @State private var favorites: [FavoriteRestaurant] = []
+    @State private var reviewedList: [ReviewedRestaurant] = []
     
     @StateObject private var vm = NearbySearchViewModel()
     
@@ -60,10 +63,14 @@ struct ContentView: View { //メインビュー
                                 // Enterキー押下時
                                 //search(keyword: searchText) //Google用
                                 Task { // ← ここで非同期コンテキストを作る
-                                        await vm.search(keyword: searchText, around: region.center)
+                                    await vm.search(keyword: searchText, around: region.center)
                                     self.results = vm.results        // ← これが無いので画面に出ていない
                                 }
-                                self.sheetOffset = UIScreen.main.bounds.height * 0.6 // mid表示
+                                //self.sheetOffset = UIScreen.main.bounds.height * 0.6 // mid表示
+                                // 検索確定 → 単一シートで結果表示
+                                withAnimation(.spring()) {
+                                    sheetOffset = UIScreen.main.bounds.height * 0.6 // mid 表示
+                                }
                             })
                             .submitLabel(.search) // キーボード右下を「検索」に
                             .padding(10)
@@ -96,6 +103,8 @@ struct ContentView: View { //メインビュー
                             )
                             .padding()
                             .focused($isFocused) // フォーカス状態を監視
+                            Spacer()
+                                .frame(width: 20)   // ここが「コンパス避けスペース」
                             
                         }
                         .padding(.horizontal)//対象に周囲といい感じに余白を作るようにやってくれる
@@ -137,19 +146,36 @@ struct ContentView: View { //メインビュー
                         }
                     }
                     
-                    // カスタムボトムシート表示
-                    BottomSheetView(
-                        //isVisible: $isSheetVisible,
-                        offset: $sheetOffset,
-                        
-                    ) {
+                    // === 単一ボトムシート（検索結果だけを入れる） ===
+                    BottomSheetView(offset: $sheetOffset) {
                         SearchResultsView(
                             results: results,
                             region: $region,
                             shouldUpdateRegion: $shouldUpdateRegion,
-                            selectedPlace: $selectedPlace,
+                            selectedPlace: $selectedPlace,   // ← ここ経由で place が選ばれる
                             favorites: $favorites,
+                            reviewedList: $reviewedList
                         )
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(1)
+                    
+                    
+                    // === ピンタップ時のオーバーレイカード ===
+                    if let place = selectedPlace {
+                        PlaceOverlayCard(
+                            name: place.name,
+                            phoneNumber: place.phoneNumber,
+                            address: place.address,
+                            onClose: {
+                                withAnimation(.spring()) {
+                                    selectedPlace = nil
+                                }
+                            }
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(2)
+                        .ignoresSafeArea(edges: .bottom)
                     }
                 }
                 .onAppear {
@@ -160,6 +186,7 @@ struct ContentView: View { //メインビュー
                 }
                 .task(id: isLoggedIn) {
                     await fetchMyRestaurants()
+                    await fetchReviewedRestaurants()
                 }
             } else {
                 LoginView(favorites: $favorites)
@@ -263,9 +290,9 @@ struct ContentView: View { //メインビュー
             }
             
             // JSONの素の文字列を先に確認（本番では消す）
-                if let s = String(data: data, encoding: .utf8) {
-                    print("返却値:", s)
-                }
+            if let s = String(data: data, encoding: .utf8) {
+                print("返却値:", s)
+            }
             
             let decoder = JSONDecoder()
             let result = try decoder.decode(FavoriteRestaurantListResponse.self, from: data)
@@ -279,21 +306,63 @@ struct ContentView: View { //メインビュー
             } else {
                 print("データの文字列変換に失敗しました")
             }
-            //
-            //                // デコード結果を安全に取り出す
-            //                if let favorites = result.userFavoriteRestaurants {
-            //                    DispatchQueue.main.async {
-            //                        self.myRestaurants = favorites
-            //                    }
-            //                } else {
-            //                    DispatchQueue.main.async {
-            //                        self.myRestaurants = []
-            //                    }
-            //                }
             
         } catch {
             print("エラーが発生しました: \(error.localizedDescription)")
         }
+    }
+    
+    func fetchReviewedRestaurants() async {
+        guard let token = UserDefaults.standard.string(forKey: "token") else {
+            print("トークンが存在しません")
+            return
+        }
+        
+        guard let url = URL(string: "https://moguroku.com/reviewRestaurant/list") else {
+            print("URLが不正です")
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("レスポンスのJSON文字列: \(jsonString)")
+            } else {
+                print("データの文字列変換に失敗しました")
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("無効なレスポンス")
+                return
+            }
+            
+            if httpResponse.statusCode == 401 {
+                print("認証エラー")
+                return // 認証エラー時は何もしない
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                throw URLError(.badServerResponse)
+            }
+            
+            let decoder = JSONDecoder()
+            let result = try decoder.decode(ReviewedRestaurantListResponse.self, from: data)
+            
+            DispatchQueue.main.async {
+                self.reviewedList = result.userReviewedList
+            }
+            
+            
+        } catch {
+            print("エラーが発生しました: \(error.localizedDescription)")
+        }
+        
     }
 }
 

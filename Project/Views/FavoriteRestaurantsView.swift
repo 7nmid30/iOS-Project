@@ -32,9 +32,9 @@ struct FavoriteRestaurantsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(restaurant.restaurantName)
                             .font(.headline)
-                        Text("登録日時: \(restaurant.createdAt)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+//                        Text("登録日時: \(restaurant.createdAt)")
+//                            .font(.caption)
+//                            .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 6)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {

@@ -24,6 +24,13 @@ struct MapView: UIViewRepresentable {
         mapView.delegate = context.coordinator
         mapView.showsUserLocation = true
         mapView.isRotateEnabled = true
+        
+        //カスタムアノテーションビュー登録
+        mapView.register(
+            PlaceAnnotationView.self,
+            forAnnotationViewWithReuseIdentifier: PlaceAnnotationView.reuseID
+        )
+        
         return mapView
     }
     
@@ -56,6 +63,14 @@ struct MapView: UIViewRepresentable {
             
             let newAnnotations = results.map { PlaceAnnotation(place: $0) }
             uiView.addAnnotations(newAnnotations)
+        }
+        
+        /* もし selectedPlaceがnilなら、選択中のアノテーション(PlaceAnnotationViewの選択)を全部解除する
+         →これしないとPlaceOverlayCardを一度閉じてまた同じピンを押して開こうとしても、アノテーションはまだ選択中扱いで開いてくれない*/
+        if selectedPlace == nil {
+            uiView.selectedAnnotations.forEach { annotation in
+                uiView.deselectAnnotation(annotation, animated: true)
+            }
         }
     }
     
@@ -103,17 +118,26 @@ struct MapView: UIViewRepresentable {
                 return annotationView
             }
             
+            //            if annotation is PlaceAnnotation {
+            //                var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: "PlacePin") as? MKPinAnnotationView
+            //                if annotationView == nil {
+            //                    annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "PlacePin")
+            //                    annotationView?.canShowCallout = true //吹き出しを表示
+            //                    annotationView?.pinTintColor = .systemTeal //水色のピンにカスタマイズ
+            //                } else {
+            //                    annotationView?.annotation = annotation
+            //                }
+            //
+            //                return annotationView
+            //            }
+            //PlaceAnnotationViewを使うように変更
             if annotation is PlaceAnnotation {
-                var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: "PlacePin") as? MKPinAnnotationView
-                if annotationView == nil {
-                    annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "PlacePin")
-                    annotationView?.canShowCallout = true //吹き出しを表示
-                    annotationView?.pinTintColor = .systemTeal //水色のピンにカスタマイズ
-                } else {
-                    annotationView?.annotation = annotation
-                }
-                
-                return annotationView
+                let placeAnnotationView = mapView.dequeueReusableAnnotationView(
+                    withIdentifier: PlaceAnnotationView.reuseID,
+                    for: annotation
+                ) as! PlaceAnnotationView
+                placeAnnotationView.annotation = annotation
+                return placeAnnotationView
             }
             
             return nil
@@ -125,15 +149,25 @@ struct MapView: UIViewRepresentable {
         }
         
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            //            if let placeAnnotation = view.annotation as? PlaceAnnotation {
+            //                if let matchedPlace = parent.results.first(where: { $0.name == placeAnnotation.title }) {
+            //                    print("一致したPlace: \(matchedPlace)")
+            //                    parent.selectedPlace = matchedPlace
+            //                }else {
+            //                    print("results: \(parent.results)")
+            //                    print("一致するPlaceが見つかりません")
+            //                }
+            //            }
             if let placeAnnotation = view.annotation as? PlaceAnnotation {
                 if let matchedPlace = parent.results.first(where: { $0.name == placeAnnotation.title }) {
-                    print("一致したPlace: \(matchedPlace)")
                     parent.selectedPlace = matchedPlace
-                }else {
-                    print("results: \(parent.results)")
-                    print("一致するPlaceが見つかりません")
                 }
             }
+        }
+        
+        // 追加：ピン選択が外れたら閉じる
+        func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+            parent.selectedPlace = nil
         }
         
         func updateUserIconRotation(with heading: CLHeading, mapRotation: Double) {

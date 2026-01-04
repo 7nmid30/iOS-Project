@@ -56,17 +56,19 @@ struct PlaceResponse: Codable {
     }
 }
 
+
 class PlaceAnnotation: NSObject, MKAnnotation {
     let coordinate: CLLocationCoordinate2D
     let title: String?
 
     //GoogleMap用
-    init(place: GooglePlace) {
-        self.coordinate = place.coordinate
-        self.title = place.name
-        //self.id = place.id
-    }
+//    init(place: GooglePlace) {
+//        self.coordinate = place.coordinate
+//        self.title = place.name
+//        //self.id = place.id
+//    }
     
+    //AppleMap用
     init(place: ApplePlace) {
         self.coordinate = place.coordinate
         self.title = place.name

@@ -13,11 +13,11 @@ struct FavoriteRestaurantListResponse: Codable {
 
 struct FavoriteRestaurant: Codable, Identifiable {
     var id: Int { restaurantId }  // SwiftUIのListで使えるように
-    let userId: String
+    //let userId: String
     let restaurantId: Int
     let restaurantName: String
-    let createdAt: String // 必要ならDateにしてもよい
-    // 追加フィールド（nullが来る場合はOptionalに）
-    let applicationUser: String?
-    let restaurant: String?
+//    let createdAt: String // 必要ならDateにしてもよい
+//    // 追加フィールド（nullが来る場合はOptionalに）
+//    let applicationUser: String?
+//    let restaurant: String?
 }

@@ -16,8 +16,11 @@ struct SearchResultsView: View {
     @Binding var selectedPlace: ApplePlace?  // 選択された場所
     
     @Binding var favorites: [FavoriteRestaurant] //お気に入りのマイレストラン
+    @Binding var reviewedList: [ReviewedRestaurant] //レビューしたマイレストラン
     
     @State private var reviewPlace: ApplePlace? = nil   // ← 行でセットする“対象”
+    
+    @StateObject private var vm = SearchResultsViewModel() // ← 追加
     
     var body: some View {
         VStack {
@@ -27,6 +30,7 @@ struct SearchResultsView: View {
             
             List(results) { place in
                 let isFav = isFavorited(place)
+                let isRev = isReviewed(place)
                 
                 HStack {
                     Text(place.name)
@@ -39,7 +43,7 @@ struct SearchResultsView: View {
                         if isFav {
                             // isFavがtrue（すでにお気に入り） のときの処理
                             // 削除処理
-                            removeRestaurant(name: place.name) { success in
+                            vm.removeRestaurant(place: place) { success in
                                 if success {
                                     Task { await fetchMyRestaurants() }
                                 } else {
@@ -49,7 +53,7 @@ struct SearchResultsView: View {
                         } else {
                             // isFavがfalse（お気に入りではない） のときの処理
                             // 登録処理
-                            favRestaurant(place: place) { success in
+                            vm.favRestaurant(place: place) { success in
                                 if success {
                                     Task { await fetchMyRestaurants() }
                                 } else {
@@ -65,12 +69,16 @@ struct SearchResultsView: View {
                     
                     // 口コミを書くボタン
                     Button(action: {
+                        if(isRev){
+                            //レビュー済みならレビュー内容を取得する
+                            
+                        }
                         print("口コミを書く tapped: \(place.name)")
                         reviewPlace = place     // ← シートは開かない。対象だけセット
 
                     }) {
                         Image(systemName: "text.bubble") // 💬 吹き出し
-                            .foregroundColor(.gray)
+                            .foregroundColor(isRev ? .blue : .gray)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -87,152 +95,32 @@ struct SearchResultsView: View {
                     selectedPlace = place
                 }
             }
-            
         }
         .sheet(item: $reviewPlace) { place in          // ← 親に1つだけ
-            ReviewSheetView(placeName: place.name) {
+            ReviewSheetView(
+                place: place,
+                isReviewed: isReviewed(place),
+                reviewedList: $reviewedList 
+            ) {
                 // 投稿後のリフレッシュが必要ならここ
             }
         }
         
         
     }
-        
     
-    
-    // すでにお気に入りか判定（名前一致で判定）
-//    private func isFavorited(_ place: Place) -> Bool {
-//        favorites.contains { fav in
-//            fav.restaurantName == place.name
-//        }
-//    }
     private func isFavorited(_ place: ApplePlace) -> Bool {
         favorites.contains { fav in
             fav.restaurantName == place.name
         }
     }
     
-    
-    func favRestaurant(place: ApplePlace, completion: @escaping (Bool) -> Void) {
-        guard let token = UserDefaults.standard.string(forKey: "token") else {
-            print("トークンがありません")
-            completion(false)
-            return
+    private func isReviewed(_ place: ApplePlace) -> Bool {
+        reviewedList.contains { rev in
+            rev.restaurantName == place.name
         }
-        
-        guard let url = URL(string: "https://moguroku.com/favoriteRestaurant/add") else {
-            print("URLが不正です")
-            completion(false)
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        
-        do {
-            let encoder = JSONEncoder()
-            // サーバ側がスネークケースなら有効化：
-            // encoder.keyEncodingStrategy = .convertToSnakeCase
-            request.httpBody = try encoder.encode(place)
-        } catch {
-            print("リクエストボディ作成エラー: \(error)")
-            completion(false)
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    print("通信エラー: \(error.localizedDescription)")
-                    completion(false)
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    print("HTTPレスポンスが不正です")
-                    completion(false)
-                    return
-                }
-                
-                if httpResponse.statusCode == 401 {
-                    print("認証エラー（ログインが必要）")
-                    completion(false)
-                    return
-                }
-                
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    print("APIエラー: \(httpResponse.statusCode)")
-                    completion(false)
-                    return
-                }
-                
-                print("登録成功")
-                completion(true)
-            }
-        }.resume()
     }
     
-    func removeRestaurant(name: String, completion: @escaping (Bool) -> Void) {
-        guard let token = UserDefaults.standard.string(forKey: "token") else {
-            print("トークンがありません")
-            completion(false)
-            return
-        }
-        
-        guard let url = URL(string: "https://moguroku.com/favoriteRestaurant/delete") else {
-            print("URLが不正です")
-            completion(false)
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let body = ["keyword": name]
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        } catch {
-            print("リクエストボディ作成エラー: \(error)")
-            completion(false)
-            return
-        }
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    print("通信エラー: \(error.localizedDescription)")
-                    completion(false)
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    print("HTTPレスポンスが不正です")
-                    completion(false)
-                    return
-                }
-                
-                if httpResponse.statusCode == 401 {
-                    print("認証エラー（ログインが必要）")
-                    completion(false)
-                    return
-                }
-                
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    print("APIエラー: \(httpResponse.statusCode)")
-                    completion(false)
-                    return
-                }
-                
-                print("削除成功")
-                completion(true)
-            }
-        }.resume()
-    }
     
     func fetchMyRestaurants() async {
         guard let token = UserDefaults.standard.string(forKey: "token") else {
@@ -279,17 +167,6 @@ struct SearchResultsView: View {
             } else {
                 print("データの文字列変換に失敗しました")
             }
-            //
-            //                // デコード結果を安全に取り出す
-            //                if let favorites = result.userFavoriteRestaurants {
-            //                    DispatchQueue.main.async {
-            //                        self.myRestaurants = favorites
-            //                    }
-            //                } else {
-            //                    DispatchQueue.main.async {
-            //                        self.myRestaurants = []
-            //                    }
-            //                }
             
         } catch {
             print("エラーが発生しました: \(error.localizedDescription)")
