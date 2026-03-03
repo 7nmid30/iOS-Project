@@ -182,7 +182,14 @@ struct ContentView: View { //メインビュー
                     locationManager.setup()
                 }
                 .sheet(isPresented: $isAccountSheetPresented) {
-                    AccountSheetView(favorites: $favorites)
+                    AccountSheetView(
+                        favorites: $favorites,
+                        onSelectFavorite: { favorite in
+                            Task {
+                                await moveMapToFavorite(favorite)
+                            }
+                        }
+                    )
                 }
                 .task(id: isLoggedIn) {
                     await fetchMyRestaurants()
@@ -197,6 +204,60 @@ struct ContentView: View { //メインビュー
     // キーボードを閉じる関数
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    
+    @MainActor
+    private func moveMapToFavorite(_ favorite: FavoriteRestaurant) async {
+        isAccountSheetPresented = false
+        
+        if let matched = results.first(where: { $0.name == favorite.restaurantName }) {
+            selectedPlace = matched
+            region.center = matched.coordinate
+            shouldUpdateRegion = true
+            return
+        }
+        
+        guard let resolved = await resolveFavoritePlace(name: favorite.restaurantName) else {
+            return
+        }
+        
+        selectedPlace = resolved
+        region.center = resolved.coordinate
+        shouldUpdateRegion = true
+    }
+    
+    @MainActor
+    private func resolveFavoritePlace(name: String) async -> ApplePlace? {
+        var request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = name
+        request.region = region
+        request.resultTypes = .pointOfInterest
+        
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            guard let item = response.mapItems.first else { return nil }
+            
+            let placeName = item.name ?? name
+            let coordinate = item.placemark.coordinate
+            let category = item.pointOfInterestCategory?.rawValue
+            
+            return ApplePlace(
+                name: placeName,
+                coordinate: coordinate,
+                phoneNumber: item.phoneNumber,
+                url: item.url,
+                address: item.placemark.title,
+                rating: nil,
+                userRatingCount: nil,
+                startPrice: nil,
+                endPrice: nil,
+                currencyCode: nil,
+                category: category
+            )
+        } catch {
+            print("お気に入り座標の解決失敗: \(error.localizedDescription)")
+            return nil
+        }
     }
     
     func search(keyword: String) {
@@ -365,7 +426,4 @@ struct ContentView: View { //メインビュー
         
     }
 }
-
-
-
 
