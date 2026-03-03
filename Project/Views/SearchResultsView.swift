@@ -32,69 +32,148 @@ struct SearchResultsView: View {
                 let isFav = isFavorited(place)
                 let isRev = isReviewed(place)
                 
-                HStack {
-                    Text(place.name)
-                        .font(.body)
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        if isFav {
-                            // isFavがtrue（すでにお気に入り） のときの処理
-                            // 削除処理
-                            vm.removeRestaurant(place: place) { success in
-                                if success {
-                                    Task { await fetchMyRestaurants() }
-                                } else {
-                                    print("削除失敗")
-                                }
-                            }
-                        } else {
-                            // isFavがfalse（お気に入りではない） のときの処理
-                            // 登録処理
-                            vm.favRestaurant(place: place) { success in
-                                if success {
-                                    Task { await fetchMyRestaurants() }
-                                } else {
-                                    print("登録失敗")
-                                }
-                            }
-                        }
-                    }) {
-                        Image(systemName: isFav ? "heart.fill" : "heart")
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    
-                    // 口コミを書くボタン
-                    Button(action: {
-                        if(isRev){
-                            //レビュー済みならレビュー内容を取得する
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(place.name)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                                .lineLimit(2)
                             
+                            if let address = place.address, !address.isEmpty {
+                                Label(address, systemImage: "mappin.and.ellipse")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
                         }
-                        print("口コミを書く tapped: \(place.name)")
-                        reviewPlace = place     // ← シートは開かない。対象だけセット
-
-                    }) {
-                        Image(systemName: "text.bubble") // 💬 吹き出し
-                            .foregroundColor(isRev ? .blue : .gray)
+                        
+                        Spacer(minLength: 8)
+                        
+                        if isFav {
+                            Text(isRev ? "お気に入り" : "行ってみたい")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(isRev ? Color.green : Color.orange)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background((isRev ? Color.green : Color.orange).opacity(0.14))
+                                .clipShape(Capsule())
+                        }
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    
+                    HStack(spacing: 10) {
+                        Label(place.ratingText, systemImage: "star.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.orange)
+                        
+                        if let count = place.userRatingCount {
+                            Text("(\(count)件)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        if let category = place.category, !category.isEmpty {
+                            Text(category)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.05))
+                                .clipShape(Capsule())
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    HStack {
+                        if let phone = place.phoneNumber, !phone.isEmpty {
+                            Label(phone, systemImage: "phone.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 10) {
+                            Button(action: {
+                                if isFav {
+                                    vm.removeRestaurant(place: place) { success in
+                                        if success {
+                                            Task { await fetchMyRestaurants() }
+                                        } else {
+                                            print("削除失敗")
+                                        }
+                                    }
+                                } else {
+                                    vm.favRestaurant(place: place) { success in
+                                        if success {
+                                            Task { await fetchMyRestaurants() }
+                                        } else {
+                                            print("登録失敗")
+                                        }
+                                    }
+                                }
+                            }) {
+                                Image(systemName: isFav ? "heart.fill" : "heart")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(isFav ? Color.red : Color.secondary)
+                                    .padding(10)
+                                    .background(Color.white.opacity(0.9))
+                                    .clipShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                            
+                            // 口コミを書くボタン
+                            Button(action: {
+                                print("口コミを書く tapped: \(place.name)")
+                                reviewPlace = place
+                            }) {
+                                Image(systemName: "text.bubble.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(isRev ? Color.blue : Color.secondary)
+                                    .padding(10)
+                                    .background(Color.white.opacity(0.9))
+                                    .clipShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading) // 選択されたList内の領域（文字を格納している領域）全体のセル背景を青くする
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    place.id == selectedPlace?.id ? Color.blue.opacity(0.2) : Color.clear
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: place.id == selectedPlace?.id
+                                ? [Color(red: 0.89, green: 0.95, blue: 1.0), Color.white]
+                                : [Color.white.opacity(0.92), Color.white.opacity(0.84)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                 )
-                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            place.id == selectedPlace?.id ? Color.blue.opacity(0.35) : Color.black.opacity(0.08),
+                            lineWidth: place.id == selectedPlace?.id ? 2 : 1
+                        )
+                )
+                .shadow(color: Color.black.opacity(place.id == selectedPlace?.id ? 0.12 : 0.07), radius: 8, y: 4)
                 .contentShape(Rectangle()) // 文字だけでなくList内の領域（文字を格納している領域）をタップ可能に
                 .onTapGesture {
                     region.center = place.coordinate
                     shouldUpdateRegion = true
                     selectedPlace = place
                 }
+                .listRowInsets(EdgeInsets(top: 8, leading: 14, bottom: 8, trailing: 14))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         }
         .sheet(item: $reviewPlace) { place in          // ← 親に1つだけ
             ReviewSheetView(
@@ -172,5 +251,12 @@ struct SearchResultsView: View {
             print("エラーが発生しました: \(error.localizedDescription)")
         }
         
+    }
+}
+
+private extension ApplePlace {
+    var ratingText: String {
+        guard let rating else { return "評価なし" }
+        return String(format: "%.1f", rating)
     }
 }
