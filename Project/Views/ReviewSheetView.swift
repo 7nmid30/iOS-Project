@@ -47,6 +47,20 @@ struct ReviewSheetView: View {
     @State private var showDeleteDialog = false
     @State private var isDeletingPhoto = false
     
+    // ★追加：拡大表示用
+    @State private var showPhotoViewer = false
+    @State private var viewerIndex: Int = 0
+    
+    // ★追加：拡大ビューに渡す“全写真”の配列（サーバー + ローカル）
+    private var allPhotoItems: [PhotoItem] {
+        let remote = reviewedPhotos.compactMap { p -> PhotoItem? in
+            guard let url = URL(string: p.photoUrl) else { return nil }
+            return .remote(url)
+        }
+        let local = selectedImages.map { PhotoItem.local($0) }
+        return remote + local
+    }
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -134,7 +148,8 @@ struct ReviewSheetView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 // 既存(サーバー)写真：URLで表示
-                                ForEach(reviewedPhotos) { p in
+                                //ForEach(reviewedPhotos) { p in
+                                ForEach(Array(reviewedPhotos.enumerated()), id: \.element.id) { index, p in
                                     ZStack(alignment: .topTrailing) {
                                         AsyncImage(url: URL(string: p.photoUrl)) { phase in
                                             switch phase {
@@ -142,12 +157,25 @@ struct ReviewSheetView: View {
                                                 ProgressView()
                                                     .frame(width: 80, height: 80)
                                             case .success(let image):
-                                                image.resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 80, height: 80)
-                                                    .clipped()
-                                                    .cornerRadius(12)
-                                                    .shadow(radius: 2)
+//                                                image.resizable()
+//                                                    .scaledToFill()
+//                                                    .frame(width: 80, height: 80)
+//                                                    .clipped()
+//                                                    .cornerRadius(12)
+//                                                    .shadow(radius: 2)
+                                                Button {
+                                                        // ★追加：拡大ビュー起動（remoteは先頭から）
+                                                        viewerIndex = index  // ← この index を後で追加します
+                                                        showPhotoViewer = true
+                                                    } label: {
+                                                        image.resizable()
+                                                            .scaledToFill()
+                                                            .frame(width: 80, height: 80)
+                                                            .clipped()
+                                                            .cornerRadius(12)
+                                                            .shadow(radius: 2)
+                                                    }
+                                                    .buttonStyle(.plain)
                                             case .failure:
                                                 Image(systemName: "photo")
                                                     .frame(width: 80, height: 80)
@@ -176,13 +204,28 @@ struct ReviewSheetView: View {
                                 // 新規(送信候補)写真
                                 ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, uiImage in
                                     ZStack(alignment: .topTrailing) {
-                                        Image(uiImage: uiImage)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 80, height: 80)
-                                            .clipped()
-                                            .cornerRadius(12)
-                                            .shadow(radius: 2)
+//                                        Image(uiImage: uiImage)
+//                                            .resizable()
+//                                            .scaledToFill()
+//                                            .frame(width: 80, height: 80)
+//                                            .clipped()
+//                                            .cornerRadius(12)
+//                                            .shadow(radius: 2)
+                                        Button {
+                                                    // ★追加：拡大ビュー起動（localは remote枚数分だけ後ろ）
+                                                    viewerIndex = reviewedPhotos.count + index
+                                                    showPhotoViewer = true
+                                                } label: {
+                                                    Image(uiImage: uiImage)
+                                                        .resizable()
+                                                        .scaledToFill()
+                                                        .frame(width: 80, height: 80)
+                                                        .clipped()
+                                                        .cornerRadius(12)
+                                                        .shadow(radius: 2)
+                                                }
+                                                .buttonStyle(.plain)
+
                                         
                                         // 削除ボタン
                                         Button {
@@ -283,6 +326,13 @@ struct ReviewSheetView: View {
             } message: {
                 Text("この操作は取り消せません。")
             }
+        }
+        // ★追加：フルスクリーンで写真ビューア
+        .fullScreenCover(isPresented: $showPhotoViewer) {
+            PhotoViewer(
+                items: allPhotoItems,
+                startIndex: viewerIndex
+            )
         }
     }
     

@@ -29,7 +29,7 @@
 
 ### 3.3 ボタン
 - キャンセル：dismiss()
-- 送信：`submit()` を実行（Taskでasync処理）
+- 送信：`submit()` （関数仕様 参照）を実行（Taskでasync処理）
 - 送信中：ProgressView 表示（vm.isLoading）
 
 ### 3.4 エラー表示
@@ -48,31 +48,22 @@
 - `.onChange(of: pickerItems)` で画像を `UIImage` に変換し `selectedImages` に追記
 - 最大5枚に丸める：`prefix(5)`
 
-## 5. 送信フロー
-- submit()
-  1. `vm.submitReview(place:)` で口コミ（JSON）送信
-  2. 成功した場合、`selectedImages` があれば `vm.uploadPhotos(place:images:)` で画像送信（multipart）
-  3. `fetchReviewedRestaurants()` でレビュー済み一覧を再取得し `reviewedList` 更新
-  4. `onSubmitted?()` で親へ通知
-  5. dismiss()
-
-## 6. API（画面側が呼ぶもの）
-### 6.1 既存口コミ取得
+## 5. API（画面側が呼ぶもの）
+### 5.1 既存口コミ取得
 - POST `https://moguroku.com/reviewRestaurant/get`
 - Authorization: Bearer token（UserDefaults "token"）
 - Body: ApplePlace（JSON）
 - Response: `ReviewedRestaurantDetailResponse` を decode
 
-### 6.2 レビュー済み一覧取得
+### 5.2 レビュー済み一覧取得
 - GET `https://moguroku.com/reviewRestaurant/list`
 - Authorization: Bearer token
 - Response: `ReviewedRestaurantListResponse` を decode
 - `reviewedList` を更新
 
-## 関数仕様（詳細）
+## 関数仕様
 
-### 1. `submit() async`
-**所属**：`ReviewSheetView`  
+### 1. `submit() async` 
 **目的**：口コミ送信 →（任意）写真送信 → 画面表示データ再取得 → 親通知 → dismiss までを一連で行う。  
 **呼び出し契機**：UI「送信」ボタン押下（`Task { await submit() }`）  
 **入力**：なし（Viewの `place`, `selectedImages`, `vm`, `reviewedList` など状態を参照）  
@@ -104,8 +95,7 @@
 
 ---
 
-### 2. `GetReviewedDetail(place: ApplePlace) async`
-**所属**：`ReviewSheetView`  
+### 2. `GetReviewedDetail(place: ApplePlace) async` 
 **目的**：既存口コミ（スコア・各項目・コメント）を取得し、入力欄へ反映する（編集モード初期化）。  
 **呼び出し契機**：`.task { ... }`（`isReviewed == true` のとき）  
 **入力**：`place: ApplePlace`  
@@ -149,7 +139,6 @@
 ---
 
 ### 3. `fetchReviewedRestaurants() async`
-**所属**：`ReviewSheetView`  
 **目的**：ユーザーの「レビューしたマイレストラン一覧」を再取得し、画面状態（`reviewedList`）を更新する。  
 **呼び出し契機**：
 - `submit()` 成功後の再取得
@@ -187,7 +176,6 @@
 ---
 
 ### 4. `fetchReviewedPhotos(_ restaurantId: Int) async`
-**所属**：`ReviewSheetView`  
 **目的**：restaurantId をキーに「レビュー写真一覧」を取得し、`reviewedPhotos` を更新する。  
 **呼び出し契機**：`submit()` 成功後（restaurantId が確定した後）  
 **入力**：`restaurantId: Int`  
@@ -224,7 +212,6 @@
 ---
 
 ### 5. `fetchReviewedPhotosByApplePlace(place: ApplePlace) async`
-**所属**：`ReviewSheetView`  
 **目的**：ApplePlace をキーに「レビュー写真一覧」を取得し、URLを絶対URLに補正した上で `reviewedPhotos` を更新する。  
 **呼び出し契機**：`.task { ... }`（編集モード初期化時）  
 **入力**：`place: ApplePlace`  
